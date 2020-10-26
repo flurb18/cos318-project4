@@ -365,9 +365,9 @@ static int do_spawn(const char *filename) {
     return -1;
   struct task_info ti = { (uint32_t) p, PROCESS };
   enter_critical();
-  for (int i = 0; i < NUM_TASKS; i++) {
+  for (int i = 0; i < NUM_PCBS; i++) {
     if (pcb[i].status == EXITED) {
-      initialize_pcb(&pcb[i], (pid_t) i, ti);
+      initialize_pcb(&pcb[i], (pid_t) i, &ti);
       unblock(&pcb[i]);
       leave_critical();
       return i;
