@@ -47,6 +47,7 @@ static void init_idt(void);
 static void init_serial(void);
 static void initialize_pcb(pcb_t *pcb, pid_t pid, struct task_info *ti);
 static int do_spawn(const char *filename);
+static int do_spawn_helper(const char *filename);
 static int do_kill(pid_t pid);
 static int do_wait(pid_t pid);
 
@@ -72,15 +73,15 @@ void _start(void) {
   init_idt();
   init_serial();
   init_mbox();
-  keyboard_init();
-
-  // Start the process named 'init'
-  do_spawn("init");
 
   // Enable the timer interrupt.  The interrupt flag will be set once we start
   // the first process, thus starting scheduling
   // Refer to the IF flag in the EFLAGS register
   enter_critical();
+  keyboard_init();
+  // Start the process named 'init'
+  do_spawn_helper("init");
+
   outb(0x21, 0xfc);
 
   // Schedule the first task
@@ -360,20 +361,24 @@ int get_max_pcbs(void) {
 static int do_spawn(const char *filename) {
   (void) filename;
   // TODO: Fill this in
+  enter_critical();
+  int result = do_spawn_helper(filename);
+  leave_critical();
+  return result;
+}
+
+static int do_spawn_helper(const char *filename) {
   Process p = ramdisk_find(filename);
   if (p == 0)
     return -1;
   struct task_info ti = { (uint32_t) p, PROCESS };
-  enter_critical();
   for (int i = 0; i < NUM_PCBS; i++) {
     if (pcb[i].status == EXITED) {
       initialize_pcb(&pcb[i], (pid_t) i, &ti);
       unblock(&pcb[i]);
-      leave_critical();
       return i;
     }
   }
-  leave_critical();
   return -2;
 }
 

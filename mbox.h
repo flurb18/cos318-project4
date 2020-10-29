@@ -10,6 +10,7 @@
 #include "common.h"
 
 void init_mbox(void);
+mbox_t do_mbox_open_helper(const char *name);
 mbox_t do_mbox_open(const char *name);
 void do_mbox_close(mbox_t mbox);
 int do_mbox_is_full(mbox_t mbox);

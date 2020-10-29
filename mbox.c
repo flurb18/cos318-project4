@@ -4,6 +4,7 @@
  */
 
 #include "common.h"
+#include "interrupt.h"
 #include "mbox.h"
 #include "sync.h"
 #include "util.h"
@@ -52,8 +53,14 @@ void init_mbox(void) {
 // MAX_MBOX_LENGTH items. If it fails because the message box table is full, it
 // will return -1. Otherwise, it returns a message box id
 mbox_t do_mbox_open(const char *name) {
-  (void) name;
-  // TODO: Fill this in
+  enter_critical();
+  mbox_t result = do_mbox_open_helper(name);
+  leave_critical();
+  return result;
+}
+
+mbox_t do_mbox_open_helper(const char *name) {
+  ASSERT(disable_count);
   int i, len;
   for (i = 0; i < MAX_MBOXEN; i++) {
     if (same_string(name, MessageBoxen[i].name) && \
@@ -81,10 +88,9 @@ mbox_t do_mbox_open(const char *name) {
 void do_mbox_close(mbox_t mbox) {
   (void) mbox;
   // TODO: Fill this in
+  enter_critical();
   MessageBoxen[mbox].usage_count--;
-  if (MessageBoxen[mbox].usage_count == 0) {
-    // Deallocate? It seems like there's nothing to do
-  }
+  leave_critical();
 }
 
 // Determine if the given message box is full. Equivalently, determine if sending
@@ -92,9 +98,12 @@ void do_mbox_close(mbox_t mbox) {
 int do_mbox_is_full(mbox_t mbox) {
   (void) mbox;
   // TODO: Fill this in
+  enter_critical();
   int f = MessageBoxen[mbox].first;
   int l = MessageBoxen[mbox].last;
-  return ((f - 1 == l) || ((f == 0) && (l == MAX_MBOX_LENGTH - 1))); 
+  int result = ((f - 1 == l) || ((f == 0) && (l == MAX_MBOX_LENGTH - 1)));
+  leave_critical();
+  return result;
 }
 
 // Enqueues a message onto a message box. If the message box is full, the process
@@ -106,6 +115,7 @@ void do_mbox_send(mbox_t mbox, void *msg, int nbytes) {
   (void) msg;
   (void) nbytes;
   // TODO: Fill this in
+  ASSERT(!disable_count);
   MessageBox *m = &MessageBoxen[mbox];
   semaphore_down(&m->s_buffree);
   lock_acquire(&m->l);
