@@ -1,0 +1,17 @@
+// README.txt
+
+We began our implementation of our process communication and management with an implementation of our spawn. In kernel.c, we implemented do_spawn() by
+entering critical and calling our do_spawn_helper, which takes in a file name, finds the entrypoint for that file, and saves the process. If found, we create 
+iterate through the PCBs until we find a process that is exited, at which point we initialize the PCB, unblock it, and return the PID. If the process is
+not found, we return -1, and if there's too many processes, we return -2. do_spawn leaves critical, and returns the helper's result.
+To implement message boxes, we defined our message struct with a string mbytes of MAX_MESSAGE_LENGTH and our messagebox with the messagebox's name, a count
+of the number of processes using it, the buffer of messages, pointers to the first and last messages in the buffer, two semaphores to track the number of 
+available sending slots and receiving slots, and a lock. To initialize MAX_MBOXEN message boxes, we initialize 2 * MAX_MBOXEN semaphores and MAX_MBOXEN locks. 
+To close a mailbox, we decrement usage count in a critical section. To check if a message box is full, we make sure its first and last pointers are not next to each
+other; if they're next to eachother, return 0; else, 1. For do_mbox_send, we assert that we haven't entered critical, decrement our available sending slots semaphore,
+acquire a lock, copy the message, increment the pointer to the last message in the messagebox's buffer, release the lock, and increment the available receiving 
+slots semaphore. To receive, we essentially follow the same procedure, but call semaphore_down on the receiving slots, increment the first pointer, and call 
+semaphore_up for the sending slots. Lastly, for usage count, since we saved that in our mbox struct, we simply return that value for the mailbox the function is
+called on. 
+To handle keyboard interrupts, in keyboard.c, to implement putchar, we leave critical, send the char that was typed to the keyboard mailbox, and reenter critical. 
+KILL AND WAIT: not done yet
