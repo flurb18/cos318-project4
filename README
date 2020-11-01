@@ -10,8 +10,13 @@ available sending slots and receiving slots, and a lock. To initialize MAX_MBOXE
 To close a mailbox, we decrement usage count in a critical section. To check if a message box is full, we make sure its first and last pointers are not next to each
 other; if they're next to eachother, return 0; else, 1. For do_mbox_send, we assert that we haven't entered critical, decrement our available sending slots semaphore,
 acquire a lock, copy the message, increment the pointer to the last message in the messagebox's buffer, release the lock, and increment the available receiving 
-slots semaphore. To receive, we essentially follow the same procedure, but call semaphore_down on the receiving slots, increment the first pointer, and call 
-semaphore_up for the sending slots. Lastly, for usage count, since we saved that in our mbox struct, we simply return that value for the mailbox the function is
-called on. 
+slots semaphore. Furthermore, in the currently running process's PCB, we have an array keeping track of all the mboxes it has opened, so here we would set the 
+corresponding spot in the PCB's array to used. To receive, we essentially follow the same procedure, but call semaphore_down on the receiving slots, increment the 
+first pointer, and call semaphore_up for the sending slots. Lastly, for usage count, since we saved that in our mbox struct, we simply return that value for the 
+mailbox the function is called on. 
 To handle keyboard interrupts, in keyboard.c, to implement putchar, we leave critical, send the char that was typed to the keyboard mailbox, and reenter critical. 
-KILL AND WAIT: not done yet
+To implement kill, we mark the PCB as exited and release all processes waiting on it. If a process is killed while blocked on a synchronization primitive, we manually
+remove the process from whatever queue it's in, which doesn't affect the order of all other processes waiting on that synchronization primitive. To close all mboxes 
+that a process has opened, we iterate through the array keeping track of a process's open boxes and decrement the usage count for all mailboxes that are open.
+Lastly, to implement wait, we block the process onto the wait queue in the PCB, and unblock all processes on that queue when that
+process is exited or killed. 
