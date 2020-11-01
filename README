@@ -14,6 +14,7 @@ slots semaphore. To receive, we essentially follow the same procedure, but call 
 semaphore_up for the sending slots. Lastly, for usage count, since we saved that in our mbox struct, we simply return that value for the mailbox the function is
 called on. 
 To handle keyboard interrupts, in keyboard.c, to implement putchar, we leave critical, send the char that was typed to the keyboard mailbox, and reenter critical. 
-To implement kill, we mark the PCB as exited and release all processes waiting on it.
+To implement kill, we mark the PCB as exited and release all processes waiting on it. If a process is killed while blocked on a synchronization primitive, we manually
+remove the process from whatever queue it's in, which doesn't affect the order of all other processes waiting on that synchronization primitive.
 Lastly, to implement wait, we block the process onto the wait queue in the PCB, and unblock all processes on that queue when that
 process is exited or killed. 
