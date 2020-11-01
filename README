@@ -15,8 +15,8 @@ corresponding spot in the PCB's array to used. To receive, we essentially follow
 first pointer, and call semaphore_up for the sending slots. Lastly, for usage count, since we saved that in our mbox struct, we simply return that value for the 
 mailbox the function is called on. 
 To handle keyboard interrupts, in keyboard.c, to implement putchar, we leave critical, send the char that was typed to the keyboard mailbox, and reenter critical. 
-To implement kill, we mark the PCB as exited and release all processes waiting on it. If a process is killed while blocked on a synchronization primitive, we manually
-remove the process from whatever queue it's in, which doesn't affect the order of all other processes waiting on that synchronization primitive. To close all mboxes 
-that a process has opened, we iterate through the array keeping track of a process's open boxes and decrement the usage count for all mailboxes that are open.
+To implement kill, if it's the currently running task, we exit; otherwise, remove it from the queue that it's in, release all tasks waiting on it, and close all 
+mailboxes it has opened. 
 Lastly, to implement wait, we block the process onto the wait queue in the PCB, and unblock all processes on that queue when that
 process is exited or killed. 
+We did not implement the extra credit.
