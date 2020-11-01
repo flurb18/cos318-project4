@@ -92,6 +92,7 @@ void _start(void) {
 }
 
 static void initialize_pcb(pcb_t *p, pid_t pid, struct task_info *ti) {
+  int i;
   p->entry_point = ti->entry_point;
   p->pid = pid;
   p->task_type = ti->task_type;
@@ -100,7 +101,6 @@ static void initialize_pcb(pcb_t *p, pid_t pid, struct task_info *ti) {
   p->sleep_until = 0;
   p->total_process_time = 0;
   p->waiting_for_lock = NULL;
-
   switch (ti->task_type) {
   case KERNEL_THREAD:
     p->ksp = stack_new();
@@ -115,6 +115,9 @@ static void initialize_pcb(pcb_t *p, pid_t pid, struct task_info *ti) {
     ASSERT(FALSE);
   }
   *--p->ksp = (uint32_t) & first_entry;
+  queue_init(&p->waiting_queue);
+  for (i = 0; i < MAX_MBOXEN; i++)
+    p->mbox_opened[i] = FALSE;
 }
 
 static uint32_t *stack_new() {
@@ -384,12 +387,51 @@ static int do_spawn_helper(const char *filename) {
 
 static int do_kill(pid_t pid) {
   (void) pid;
-  // TODO: Fill this in
-  return -1;
+  if (pid >= get_max_pcbs())
+    return -1;
+  enter_critical();
+  if (current_running->pid == pid) {
+    // If currently running, just exit
+    leave_critical();
+    do_exit();
+  }
+  // Otherwise we're in a queue
+  pcb_t *task = &pcb[pid];
+  node_t *pcbnode = &task->node;
+  switch (task->status) {
+    // The first two cases occur when the task is the in the ready queue
+  case FIRST_TIME:
+  case READY:
+    if (ENABLE_PRIORITIES)
+      total_ready_priority -= task->priority;
+    break;
+  case BLOCKED:
+    break;
+  case EXITED:
+    leave_critical();
+    return 0;
+  }
+  // Remove it from the queue its in
+  ASSERT(pcbnode->prev);
+  ASSERT(pcbnode->next);
+  pcbnode->prev->next = pcbnode->next;
+  pcbnode->next->prev = pcbnode->prev;
+  // Release tasks waiting on this one
+  unblock_waiting(task);
+  // Close mboxes opened by this task
+  close_mboxes(task);
+  task->status = EXITED;
+  leave_critical();
+  return 0;
 }
 
 static int do_wait(pid_t pid) {
   (void) pid;
   // TODO: Fill this in
-  return -1;
+  if (pid >= get_max_pcbs() || pcb[pid].status == EXITED)
+    return -1;
+  enter_critical();
+  block(&pcb[pid].waiting_queue);
+  leave_critical();
+  return 0;
 }

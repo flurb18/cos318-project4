@@ -10,6 +10,7 @@
 #include "util.h"
 #include "printf.h"
 #include "kernel.h"
+#include "mbox.h"
 
 volatile uint64_t num_ticks;
 pcb_t *current_running;
@@ -166,6 +167,8 @@ void do_yield() {
 
 void do_exit() {
     enter_critical();
+    unblock_waiting(current_running);
+    close_mboxes(current_running);
     current_running->status = EXITED;
     scheduler_entry();
     // No need for leave_critical() since scheduler_entry() never returns
@@ -223,4 +226,13 @@ void unblock(pcb_t * task) {
 static void idle(void) {
   // Interrupts must be ENABLED
   ASSERT(!disable_count);
+}
+
+void unblock_waiting(pcb_t *task) {
+  ASSERT(disable_count);
+  pcb_t *temp = (pcb_t *)queue_get(&task->waiting_queue);
+  while (temp != NULL) {
+    unblock(temp);
+    temp = (pcb_t *)queue_get(&task->waiting_queue);
+  }
 }

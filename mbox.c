@@ -66,6 +66,7 @@ mbox_t do_mbox_open_helper(const char *name) {
     if (same_string(name, MessageBoxen[i].name) && \
         MessageBoxen[i].usage_count > 0) {
       MessageBoxen[i].usage_count++;
+      current_running->mbox_opened[i] = TRUE;
       return i;
     }
   }
@@ -78,10 +79,16 @@ mbox_t do_mbox_open_helper(const char *name) {
       if (len > MBOX_NAME_LENGTH)
         len = MBOX_NAME_LENGTH;
       bcopy((char *)name, MessageBoxen[i].name, len);
+      current_running->mbox_opened[i] = TRUE;
       return i;
     }
   }
   return -1;
+}
+
+static void do_mbox_close_helper(mbox_t mbox, pcb_t *task) {
+  MessageBoxen[mbox].usage_count--;
+  task->mbox_opened[mbox] = FALSE;
 }
 
 // Closes a message box
@@ -89,8 +96,17 @@ void do_mbox_close(mbox_t mbox) {
   (void) mbox;
   // TODO: Fill this in
   enter_critical();
-  MessageBoxen[mbox].usage_count--;
+  do_mbox_close_helper(mbox, current_running);
   leave_critical();
+}
+
+void close_mboxes(pcb_t *task) {
+  ASSERT(disable_count);
+  int i;
+  for (i = 0; i < MAX_MBOXEN; i++) {
+    if (task->mbox_opened[i] == TRUE)
+      do_mbox_close_helper(i, task);
+  }
 }
 
 // Determine if the given message box is full. Equivalently, determine if sending

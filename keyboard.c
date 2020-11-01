@@ -257,10 +257,6 @@ void keyboard_init(void) {
   keyboard_mbox = do_mbox_open_helper( KEYBOARD_MBOX_NAME );
 }
 
-// Phony input string
-static const char message[] = "help\nplane\ncount\n";
-static int moff = 0;
-
 // Function to read a character from the keyboard queue
 int do_getchar() {
   char buf;

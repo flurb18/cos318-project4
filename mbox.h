@@ -9,13 +9,17 @@
 // Includes definitions or MAX_MBOXEN, MAX_MBOX_LENGTH, and MAX_MESSAGE_LENGTH
 #include "common.h"
 
+#include "scheduler.h"
+
 void init_mbox(void);
-mbox_t do_mbox_open_helper(const char *name);
 mbox_t do_mbox_open(const char *name);
+mbox_t do_mbox_open_helper(const char *name);
 void do_mbox_close(mbox_t mbox);
 int do_mbox_is_full(mbox_t mbox);
 void do_mbox_send(mbox_t mbox, void *msg, int nbytes);
 void do_mbox_recv(mbox_t mbox, void *msg, int nbytes);
 unsigned int do_mbox_usage_count(mbox_t mbox);
+
+void close_mboxes(pcb_t *task);
 
 #endif

@@ -10,50 +10,52 @@
 #include "queue.h"
 
 typedef enum {
-    KERNEL_THREAD,
-    PROCESS
+  KERNEL_THREAD,
+  PROCESS
 } task_type_t;
 
 typedef int priority_t;
 
 typedef enum {
-    EXITED = 0,
-    FIRST_TIME,
-    READY,
-    BLOCKED
+  EXITED = 0,
+  FIRST_TIME,
+  READY,
+  BLOCKED
 } status_t;
 
 // Simplified structure, used in processes.c to declare all processes to start
 struct task_info {
-    uint32_t entry_point;
-    task_type_t task_type;
+  uint32_t entry_point;
+  task_type_t task_type;
 };
 
 typedef struct pcb {
-    // DO NOT CHANGE THE ORDER
-    node_t node;
-    uint32_t kflags;
-    uint32_t kregs[8];
-    uint32_t *ksp;
-    uint32_t uflags;
-    uint32_t uregs[8];
-    uint32_t *usp;
-    int nested_count;
-    // entry.S depends on the precise ordering of fields preceding this comment
-    uint32_t entry_point;
-    pid_t pid;
-    task_type_t task_type;
-    priority_t priority;
-    status_t status;
-    uint32_t entry_count;
-    // If this process is in the sleep queue, this tells us the time after which
-    // we should let it out
-    uint64_t sleep_until;
-    // For priorities, keep track of how much time we have spent in this process
-    uint64_t last_entry_time;
-    uint64_t total_process_time;
-    // For deadlock detection
-    struct lock *waiting_for_lock;
+  // DO NOT CHANGE THE ORDER
+  node_t node;
+  uint32_t kflags;
+  uint32_t kregs[8];
+  uint32_t *ksp;
+  uint32_t uflags;
+  uint32_t uregs[8];
+  uint32_t *usp;
+  int nested_count;
+  // entry.S depends on the precise ordering of fields preceding this comment
+  uint32_t entry_point;
+  pid_t pid;
+  task_type_t task_type;
+  priority_t priority;
+  status_t status;
+  uint32_t entry_count;
+  // If this process is in the sleep queue, this tells us the time after which
+  // we should let it out
+  uint64_t sleep_until;
+  // For priorities, keep track of how much time we have spent in this process
+  uint64_t last_entry_time;
+  uint64_t total_process_time;
+  // For deadlock detection
+  struct lock *waiting_for_lock;
+  bool_t mbox_opened[MAX_MBOXEN];
+  node_t waiting_queue;
 } pcb_t;
 
 extern priority_t total_ready_priority;
@@ -96,5 +98,10 @@ void block(node_t * wait_queue);
 
 // Unblock the specified task
 void unblock(pcb_t * task);
+
+// Unblock all tasks waiting on the specified task
+void unblock_waiting(pcb_t *task);
+
+
 
 #endif
