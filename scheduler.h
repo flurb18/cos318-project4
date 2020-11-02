@@ -56,6 +56,7 @@ typedef struct pcb {
   struct lock *waiting_for_lock;
   bool_t mbox_opened[MAX_MBOXEN];
   node_t waiting_queue;
+  node_t lock_queue;
 } pcb_t;
 
 extern priority_t total_ready_priority;
@@ -102,6 +103,7 @@ void unblock(pcb_t * task);
 // Unblock all tasks waiting on the specified task
 void unblock_waiting(pcb_t *task);
 
-
+// Release all locks held by the specified task
+void release_locks(pcb_t *task);
 
 #endif

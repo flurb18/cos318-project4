@@ -47,6 +47,8 @@ void lock_init(lock_t * l) {
     // that locks are initialized only once
     l->status = UNLOCKED;
     l->owner = NULL;
+    l->node.prev = NULL;
+    l->node.next = NULL;
     queue_init(&l->wait_queue);
 }
 
@@ -66,6 +68,7 @@ static int lock_acquire_helper(lock_t * l) {
     }
 
     l->status = LOCKED;
+    queue_put(&current_running->lock_queue, &l->node);
     return 0;
 }
 
@@ -78,7 +81,7 @@ int lock_acquire(lock_t * l) {
     return result;
 }
 
-static void lock_release_helper(lock_t * l) {
+void lock_release_helper(lock_t * l) {
     ASSERT(disable_count);
     pcb_t *p = unblock_one(&l->wait_queue);
     
@@ -88,7 +91,12 @@ static void lock_release_helper(lock_t * l) {
     } else {
         l->owner = NULL;
     }
-
+    if (l->node.prev)
+      l->node.prev->next = l->node.next;
+    if (l->node.next)
+      l->node.next->prev = l->node.prev;
+    l->node.next = NULL;
+    l->node.prev = NULL;
     l->status = UNLOCKED;
 }
 

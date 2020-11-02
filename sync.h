@@ -9,6 +9,7 @@
 #include "queue.h"
 
 typedef struct lock {
+  node_t node;
     enum {
         UNLOCKED,
         LOCKED
@@ -43,6 +44,7 @@ typedef struct {
 void lock_init(lock_t *);
 int lock_acquire(lock_t *);
 void lock_release(lock_t *);
+void lock_release_helper(lock_t *);
 
 // Condition variable functions
 void condition_init(condition_t * c);

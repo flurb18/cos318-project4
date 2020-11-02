@@ -116,6 +116,7 @@ static void initialize_pcb(pcb_t *p, pid_t pid, struct task_info *ti) {
   }
   *--p->ksp = (uint32_t) & first_entry;
   queue_init(&p->waiting_queue);
+  queue_init(&p->lock_queue);
   for (i = 0; i < MAX_MBOXEN; i++)
     p->mbox_opened[i] = FALSE;
 }
@@ -387,9 +388,11 @@ static int do_spawn_helper(const char *filename) {
 
 static int do_kill(pid_t pid) {
   (void) pid;
-  if (pid >= get_max_pcbs())
-    return -1;
   enter_critical();
+  if (pid >= get_max_pcbs() || pid < 0) {
+    leave_critical();
+    return -1;
+  }
   if (current_running->pid == pid) {
     // If currently running, just exit
     leave_critical();
@@ -399,7 +402,7 @@ static int do_kill(pid_t pid) {
   pcb_t *task = &pcb[pid];
   node_t *pcbnode = &task->node;
   switch (task->status) {
-    // The first two cases occur when the task is the in the ready queue
+  // The first two cases occur when the task is the in the ready queue
   case FIRST_TIME:
   case READY:
     if (ENABLE_PRIORITIES)
@@ -409,17 +412,16 @@ static int do_kill(pid_t pid) {
     break;
   case EXITED:
     leave_critical();
-    return 0;
+    return -1;
   }
-  // Remove it from the queue its in
-  ASSERT(pcbnode->prev);
-  ASSERT(pcbnode->next);
+  // Remove it from the queue its in, which we know to be nonempty
   pcbnode->prev->next = pcbnode->next;
   pcbnode->next->prev = pcbnode->prev;
   // Release tasks waiting on this one
   unblock_waiting(task);
   // Close mboxes opened by this task
   close_mboxes(task);
+  release_locks(task);
   task->status = EXITED;
   leave_critical();
   return 0;
